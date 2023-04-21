@@ -20,7 +20,8 @@ def mine_block(data: str):
 def get_chain():
     if not chain.is_chain_valid():
         return fastapi.HTTPException(status_code=400, detail="The chain is invalid")
-    return chain.chain
+    chain = chain.chain
+    return chain
 
 # endpoint to see if the chain is valid
 @app.get("/validate/")
