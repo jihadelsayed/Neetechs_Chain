@@ -17,11 +17,8 @@ python3 -m pip freeze > requirements.txt
 ### to build it
 docker build -t neetechs_chain .
 
-### to upload it
-docker run --publish 8888:8888 neetechs_chain
-
 ### to run the application
-docker run neetechs_chain
+docker run --publish 8888:8888 neetechs_chain
 
 ### to go into the shell of the docker
 docker run neetechs_chain /bin/bash
