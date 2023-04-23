@@ -98,3 +98,21 @@ class Chain:
             block_index += 1
 
         return True
+    def send_money(self, sender_address: str, recipient_address: str, amount: int) -> bool:
+        """
+        Send a specified amount of money from the sender's address to the recipient's address
+        """
+        # Check if the sender has sufficient funds
+        sender_balance = self.get_balance(sender_address)
+        if sender_balance < amount:
+            return False
+
+        # Create a transaction and add it to the pending transactions list
+        transaction = {
+            "sender": sender_address,
+            "recipient": recipient_address,
+            "amount": amount
+        }
+        self.pending_transactions.append(transaction)
+
+        return True

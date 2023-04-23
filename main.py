@@ -38,3 +38,14 @@ def previous_block():
         return fastapi.HTTPException(status_code=400, detail="The chain is invalid")
         
     return chain.get_previous_block()
+    
+@app.post("/chain/send_money/")
+def send_money(sender: str, recipient: str, amount: int):
+    """
+    Send a specified amount of money from the sender's address to the recipient's address
+    """
+    success = chain.send_money(sender_address=sender, recipient_address=recipient, amount=amount)
+    if not success:
+        return fastapi.HTTPException(status_code=400, detail="Transaction failed")
+
+    return {"message": "Transaction successful"}
