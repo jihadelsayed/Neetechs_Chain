@@ -13,6 +13,13 @@ def mine_block(data: str):
     block = chain.mine_block(data=data)
 
     return block
+@app.post("/mine_transaction/")
+def mine_transaction(data: str):
+    if not chain.is_chain_valid():
+        return fastapi.HTTPException(status_code=400, detail="The chain is invalid")
+    block = chain.mine_transaction(data=data)
+
+    return block
 
 
 # endpoint to return the chain

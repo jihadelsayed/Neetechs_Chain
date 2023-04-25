@@ -6,10 +6,39 @@ import json as _json
 class Chain:
     def __init__(self):
         self.chain = list()
+        self.current_transactions = list()
         initial_block = self._create_block(
             data="genesis block", proof=1, previous_hash="0", index=1
         )
         self.chain.append(initial_block)
+
+    def mine_transaction(self) -> dict:
+        previous_block = self.get_previous_block()
+        previous_proof = previous_block["proof"]
+        index = len(self.chain) + 1
+        proof = self._proof_of_work(
+            previous_proof=previous_proof, index=index, transactions=self.current_transactions
+        )
+        previous_hash = self._hash(block=previous_block)
+        block = self._create_block(
+            transactions=self.current_transactions, proof=proof, previous_hash=previous_hash, index=index
+        )
+        self.chain.append(block)
+        self.current_transactions = []
+        return block
+
+    def add_transaction(self, sender_address: str, recipient_address: str, amount: int) -> bool:
+        """
+        Add a new transaction to the current list of transactions
+        """
+        transaction = {
+            "sender": sender_address,
+            "recipient": recipient_address,
+            "amount": amount
+        }
+        self.current_transactions.append(transaction)
+        return True
+
 
     def mine_block(self, data: str) -> dict:
         previous_block = self.get_previous_block()
@@ -98,6 +127,19 @@ class Chain:
             block_index += 1
 
         return True
+    def get_balance(self, address: str) -> int:
+        """
+        Get the current balance of the given address
+        """
+        balance = 0
+        for block in self.chain:
+            for transaction in block["transactions"]:
+                if transaction["sender"] == address:
+                    balance -= transaction["amount"]
+                elif transaction["recipient"] == address:
+                    balance += transaction["amount"]
+        return balance
+
     def send_money(self, sender_address: str, recipient_address: str, amount: int) -> bool:
         """
         Send a specified amount of money from the sender's address to the recipient's address
