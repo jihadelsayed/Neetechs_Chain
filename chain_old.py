@@ -1,20 +1,22 @@
-import datetime as dt
-import hashlib
-import json
-import plyvel
+import datetime as _dt
+import hashlib as _hashlib
+import json as _json
+# python -m uvicorn main:app --reload
+
+from nas.insan import Insan
+from mal.amal import Amal
+from mal.fee import generate_random_fee
 
 class Chain:
     def __init__(self):
         self.chain = list()
         self.current_transactions = list()
+        self.family_tree = {}  # Dictionary to store the family tree
         self.fee_address = "fee_address"
-        self.db = plyvel.DB('blockchain.db', create_if_missing=True)  # LevelDB database
-
         initial_block = self._create_block(
             data="genesis block", proof=1, previous_hash="0", index=1
         )
         self.chain.append(initial_block)
-    
     def mine_transaction(self) -> dict:
         previous_block = self.get_previous_block()
         previous_proof = previous_block["proof"]
@@ -28,7 +30,6 @@ class Chain:
         )
         self.chain.append(block)
         self.current_transactions = []
-        self._store_block_in_db(block)  # Store the block in the LevelDB database
         return block
 
     def add_transaction(self, sender_address: str, recipient_address: str, amount: int) -> bool:
@@ -55,7 +56,6 @@ class Chain:
             data=data, proof=proof, previous_hash=previous_hash, index=index
         )
         self.chain.append(block)
-        self._store_block_in_db(block)  # Store the block in the LevelDB database
         return block
 
     def _create_block(
@@ -63,7 +63,7 @@ class Chain:
     ) -> dict:
         block = {
             "index": index,
-            "timestamp": str(dt.datetime.now()),
+            "timestamp": str(_dt.datetime.now()),
             "data": data,
             "proof": proof,
             "previous_hash": previous_hash,
@@ -78,7 +78,7 @@ class Chain:
         self, new_proof: int, previous_proof: int, index: int, data: str
     ) -> bytes:
         to_digest = str(new_proof ** 2 - previous_proof ** 2 + index) + data
-        # It returns a UTF-8 encoded version of the string
+        # It returns an utf-8 encoded version of the string
         return to_digest.encode()
 
     def _proof_of_work(self, previous_proof: str, index: int, data: str) -> int:
@@ -87,7 +87,7 @@ class Chain:
 
         while not check_proof:
             to_digest = self._to_digest(new_proof, previous_proof, index, data)
-            hash_operation = hashlib.sha256(to_digest).hexdigest()
+            hash_operation = _hashlib.sha256(to_digest).hexdigest()
             if hash_operation[:4] == "0000":
                 check_proof = True
             else:
@@ -97,11 +97,11 @@ class Chain:
 
     def _hash(self, block: dict) -> str:
         """
-        Hash a block and return the cryptographic hash of the block
+        Hash a block and return the crytographic hash of the block
         """
-        encoded_block = json.dumps(block, sort_keys=True).encode()
+        encoded_block = _json.dumps(block, sort_keys=True).encode()
 
-        return hashlib.sha256(encoded_block).hexdigest()
+        return _hashlib.sha256(encoded_block).hexdigest()
 
     def is_chain_valid(self) -> bool:
         previous_block = self.chain[0]
@@ -109,13 +109,13 @@ class Chain:
 
         while block_index < len(self.chain):
             block = self.chain[block_index]
-            # Check if the previous hash of the current block is the same as the hash of its previous block
+            # Check if the previous hash of the current block is the same as the hash of it's previous block
             if block["previous_hash"] != self._hash(previous_block):
                 return False
 
             previous_proof = previous_block["proof"]
             index, data, proof = block["index"], block["data"], block["proof"]
-            hash_operation = hashlib.sha256(
+            hash_operation = _hashlib.sha256(
                 self._to_digest(
                     new_proof=proof,
                     previous_proof=previous_proof,
@@ -163,28 +163,46 @@ class Chain:
             "recipient": recipient_address,
             "amount": amount
         }
-        self.current_transactions.append(transaction)
+        self.pending_transactions.append(transaction)
         # Create a transaction for the fee and add it to the current transactions list
         fee_transaction = {
             "sender": sender_address,
-            "recipient": self.fee_address,  
+            "recipient": self.fee_address,  # Replace "fee_address" with the actual address where the fee will be collected
             "amount": random_fee
         }
         self.current_transactions.append(fee_transaction)
         return True
     
-    def _store_block_in_db(self, block: dict) -> None:
+    def add_insan(self, insan: Insan) -> bool:
         """
-        Store a block in the LevelDB database
+        Add an insan to the family tree
         """
-        block_hash = self._hash(block)
-        self.db.put(block_hash.encode(), json.dumps(block).encode())
+        if insan.id in self.family_tree:
+            return False  # Insan already exists in the family tree
 
-    def load_chain_from_db(self) -> None:
+        self.family_tree[insan.id] = insan
+        return True
+    
+    def add_relationship(self, parent_id: str, child_id: str) -> bool:
         """
-        Load the blockchain from the LevelDB database
+        Add a parent-child relationship to the family tree
         """
-        for key, value in self.db:
-            block = json.loads(value.decode())
-            self.chain.append(block)
+        if parent_id not in self.family_tree or child_id not in self.family_tree:
+            return False  # Parent or child does not exist in the family tree
 
+        parent = self.family_tree[parent_id]
+        child = self.family_tree[child_id]
+
+        parent.add_child(child)
+        child.add_parent(parent)
+
+        return True
+
+    def get_insan(self, id: str) -> Insan:
+        """
+        Get an insan from the family tree based on the ID
+        """
+        if id in self.family_tree:
+            return self.family_tree[id]
+
+        return None
